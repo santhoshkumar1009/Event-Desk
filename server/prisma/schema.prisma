@@ -1,0 +1,249 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String         @id @default(uuid())
+  email        String         @unique
+  password     String
+  name         String
+  role         String         // STUDENT | ORGANIZER | ADMIN
+  department   String         // e.g. "Computer Science", "Electronics", "Mechanical"
+  studentId    String?        // e.g. "CS2024-042"
+  avatar       String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  eventsOrganized Event[]      @relation("OrganizerEvents")
+  registrations   Registration[]
+  announcements   Announcement[]
+  volunteerProfile Volunteer?
+  assignedTasks   Task[]         @relation("TaskAssignee")
+  points          Points[]
+  feedback        Feedback[]
+  submissions     ProjectSubmission[]
+  lostItems       LostItem[]
+  teamProfile     TeamMateProfile?
+  supportTickets  SupportTicket[]
+}
+
+model Venue {
+  id          String   @id @default(uuid())
+  name        String   // e.g. "Main Auditorium", "Lab 301"
+  building    String   // e.g. "Tech Block A"
+  capacity    Int
+  facilities  String   // e.g. "Projector, AC, Audio System"
+  isActive    Boolean  @default(true)
+
+  events      Event[]
+}
+
+model Event {
+  id             String         @id @default(uuid())
+  title          String
+  category       String         // Hackathon, Cultural, Workshop, Sports, Seminar
+  description    String
+  bannerUrl      String?
+  startDate      DateTime
+  endDate        DateTime
+  venueId        String
+  venue          Venue          @relation(fields: [venueId], references: [id])
+  organizerId    String
+  organizer      User           @relation("OrganizerEvents", fields: [organizerId], references: [id])
+  capacity       Int
+  rules          String?
+  customFields   String?        // JSON string of custom registration fields
+  status         String         @default("DRAFT") // DRAFT, PENDING, APPROVED, LIVE, COMPLETED
+  pointsValue    Int            @default(10)
+  accessCode           String?        // Secure access code for event organizer access
+  budgetStatus         String         @default("NOT_SUBMITTED") // NOT_SUBMITTED, PENDING_APPROVAL, APPROVED, REJECTED, REVISION_REQUESTED
+  budgetTotalPlanned   Float          @default(0)
+  budgetApprovedAmount Float?
+  budgetAdminComment   String?
+  budgetSubmittedAt    DateTime?
+  budgetReviewedAt     DateTime?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  registrations  Registration[]
+  announcements  Announcement[]
+  assignments    VolunteerAssignment[]
+  tasks          Task[]
+  expenses       Expense[]
+  points         Points[]
+  feedback       Feedback[]
+  submissions    ProjectSubmission[]
+  lostItems      LostItem[]
+  teamProfiles   TeamMateProfile[]
+}
+
+model Registration {
+  id               String   @id @default(uuid())
+  eventId          String
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  registrationType String   @default("INDIVIDUAL") // INDIVIDUAL | TEAM
+  teamName         String?
+  teamMembers      String?  // JSON string
+  customResponses  String?  // JSON string
+  status           String   @default("CONFIRMED") // CONFIRMED | WAITLIST | CANCELLED
+  checkedIn        Boolean  @default(false)
+  checkedInAt      DateTime?
+  qrTicketCode     String   @unique @default(uuid())
+  registeredAt     DateTime @default(now())
+}
+
+model Announcement {
+  id             String    @id @default(uuid())
+  eventId        String?
+  event          Event?    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User      @relation(fields: [authorId], references: [id])
+  title          String
+  content        String
+  isPinned       Boolean   @default(false)
+  isUrgent       Boolean   @default(false)
+  targetAudience String    @default("ALL") // ALL | PARTICIPANTS | WAITLISTED | VOLUNTEERS
+  scheduledAt    DateTime?
+  publishedAt    DateTime  @default(now())
+}
+
+model Volunteer {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone       String?
+  skills      String?
+  status      String   @default("ACTIVE") // ACTIVE | INACTIVE
+
+  assignments VolunteerAssignment[]
+}
+
+model VolunteerAssignment {
+  id          String    @id @default(uuid())
+  volunteerId String
+  volunteer   Volunteer @relation(fields: [volunteerId], references: [id], onDelete: Cascade)
+  eventId     String
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  role        String    // e.g. "Registration Desk", "Stage Handler"
+  shiftStart  DateTime
+  shiftEnd    DateTime
+  status      String    @default("ASSIGNED") // ASSIGNED | CHECKED_IN | COMPLETED
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  eventId     String
+  event       Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      String    @default("TODO") // TODO | IN_PROGRESS | DONE
+  assigneeId  String?
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  deadline    DateTime?
+  priority    String    @default("MEDIUM") // LOW | MEDIUM | HIGH
+  createdAt   DateTime  @default(now())
+}
+
+model Expense {
+  id            String   @id @default(uuid())
+  eventId       String
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title         String
+  category      String   // Catering, Equipment, Prizes, Marketing, Logistics
+  plannedAmount Float
+  actualAmount  Float    @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+}
+
+model Points {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  pointsEarned Int
+  awardedAt    DateTime @default(now())
+}
+
+model Feedback {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+model ProjectSubmission {
+  id          String   @id @default(uuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  repoUrl     String?  // GitHub or source repository link
+  demoUrl     String?  // Live demo URL or video link
+  reportUrl   String?  // Document URL or presentation deck link
+  teamMembers String?  // Names or comma-separated member list
+  status      String   @default("SUBMITTED") // SUBMITTED | REVIEWED | SHORTLISTED | WINNER
+  feedback    String?
+  score       Int?
+  submittedAt DateTime @default(now())
+}
+
+model LostItem {
+  id           String   @id @default(uuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemName     String
+  category     String   // Electronics | ID/Cards | Bags | Accessories | Other
+  description  String
+  location     String?  // e.g. "Main Auditorium Row F"
+  contactPhone String?
+  status       String   @default("REPORTED") // REPORTED | FOUND | CLAIMED | RESOLVED
+  foundNotes   String?  // Notes from organizer e.g. "Item placed at Registration Desk"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model TeamMateProfile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId     String?
+  event       Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  skills      String   // e.g. "React, Node.js, UI/UX Design, Machine Learning"
+  roleLooking String   // e.g. "Frontend Engineer, AI Specialist, Team Lead"
+  bio         String?
+  lookingFor  String?
+  status      String   @default("LOOKING") // LOOKING | TEAMED_UP
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SupportTicket {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category  String   // Registration | QR Pass | Event Info | Technical | Feedback
+  subject   String
+  message   String
+  status    String   @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED
+  response  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

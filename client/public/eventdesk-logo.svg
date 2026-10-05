@@ -1,0 +1,12 @@
+<svg viewBox="0 0 880 760" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Left vertical pill -->
+  <rect x="4" y="4" width="162" height="750" rx="81" fill="#3B49DF" />
+  <!-- Top horizontal pill -->
+  <rect x="239" y="4" width="583" height="179" rx="89.5" fill="#3B49DF" />
+  <!-- Middle horizontal pill -->
+  <rect x="239" y="293" width="393" height="180" rx="90" fill="#20B2AA" />
+  <!-- Middle right circle -->
+  <circle cx="785" cy="383" r="91" fill="#20B2AA" />
+  <!-- Bottom horizontal pill -->
+  <rect x="239" y="576" width="524" height="178" rx="89" fill="#FBBF24" />
+</svg>
